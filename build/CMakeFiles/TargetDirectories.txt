@@ -1,0 +1,4 @@
+/home/mconn/workspace/CarbonDioxide/build/CMakeFiles/rebuild_cache.dir
+/home/mconn/workspace/CarbonDioxide/build/CMakeFiles/edit_cache.dir
+/home/mconn/workspace/CarbonDioxide/build/CMakeFiles/CarbonDioxide.dir
+/home/mconn/workspace/CarbonDioxide/build/CMakeFiles/CarbonDioxide_autogen.dir

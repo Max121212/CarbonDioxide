@@ -1,16 +1,19 @@
 #include "CarbonDioxideSensor.h"
 #include <QRandomGenerator>
-#include <cmath> // For std::abs
+#include <cmath>
 
-CarbonDioxideSensor::CarbonDioxideSensor(QObject *parent)
-    : QObject(parent), carbonDioxideValue_(0), targetValue_(0), targetValueSet_(false)
+CarbonDioxideSensor::CarbonDioxideSensor(QObject *parent, int minValue, int maxValue, int smoothingFactor, int tolerance)
+    : QObject(parent), carbonDioxideValue_(0), targetValue_(0), targetValueSet_(false), minValue_(minValue), maxValue_(maxValue), 
+    smoothingFactor_(smoothingFactor), tolerance_(tolerance)
 {
+    // Initialize the timer and connect it to the updateSensorValue slot
     updateTimer_ = new QTimer(this);
     connect(updateTimer_, &QTimer::timeout, this, &CarbonDioxideSensor::updateSensorValue);
 }
 
 CarbonDioxideSensor::~CarbonDioxideSensor()
 {
+    // Stop the timer if it's active before destruction
     if (updateTimer_->isActive()) {
         updateTimer_->stop();
     }
@@ -18,34 +21,31 @@ CarbonDioxideSensor::~CarbonDioxideSensor()
 
 void CarbonDioxideSensor::start()
 {
-    updateTimer_->start(1000); // Update every second
+    // Start the timer with a 1000 ms (1 second) interval
+    updateTimer_->start(1000);
 }
 
 void CarbonDioxideSensor::updateSensorValue()
 {
-    const int minValue = 0;
-    const int maxValue = 100;
-    const int smoothingFactor = 1; // Smoothing step size
-    const int tolerance = 1; // Tolerance to consider the target value reached
-
+    // If the target value has not been set, generate a new random target value
     if (!targetValueSet_) {
-        targetValue_ = QRandomGenerator::global()->bounded(minValue, maxValue + 1);
+        targetValue_ = QRandomGenerator::global()->bounded(minValue_, maxValue_ + 1);
         targetValueSet_ = true;
-        emit publishTargetValue();
+        emit publishTargetValue(); // Emit signal to notify that the target value has changed
     }
 
-    // Smooth transition towards the target value
+    // Smoothly transition the current value towards the target value
     if (carbonDioxideValue_ < targetValue_) {
-        carbonDioxideValue_ = qMin(carbonDioxideValue_ + smoothingFactor, targetValue_);
+        carbonDioxideValue_ = qMin(carbonDioxideValue_ + smoothingFactor_, targetValue_);
     } else if (carbonDioxideValue_ > targetValue_) {
-        carbonDioxideValue_ = qMax(carbonDioxideValue_ - smoothingFactor, targetValue_);
+        carbonDioxideValue_ = qMax(carbonDioxideValue_ - smoothingFactor_, targetValue_);
     }
 
-    // Emit the signal
-    emit publishSensorUpdate(carbonDioxideValue_);
+    // Emit the signal to notify that the sensor value has been updated
+    emit publishSensorValue(carbonDioxideValue_);
 
-    // Check if the current value is close enough to the target
-    if (std::abs(carbonDioxideValue_ - targetValue_) <= tolerance) {
-        targetValueSet_ = false; // Set flag to generate a new target value in the next iteration
+    // If the current value is within the tolerance range of the target, prepare for a new target
+    if (std::abs(carbonDioxideValue_ - targetValue_) <= tolerance_) {
+        targetValueSet_ = false; // Reset flag to generate a new target value in the next update
     }
 }
